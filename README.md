@@ -2,6 +2,7 @@
 
 **Team:** Jeevan Mandala, Anand Joel Battula  
 **Project Leader (Iteration 2):** Jeevan Mandala  
+**Repository:** https://github.com/Jeev2727/Ds5020-naive-bayes-classifier
 **Course:** DS5020 Intro Linear Algebra & Probability, Fall 2026  
 **Current iteration:** 2 (math foundation, data loading, simulation check)
 
@@ -52,6 +53,6 @@ same numbers.
 | Iteration | Contents | Status |
 |---|---|---|
 | 1 | Proposal and math plan | Submitted |
-| 2 | Notation, definitions, assumptions, derivations, math questions, algorithm, data description, simulation check | In progress |
+| 2 | Notation, definitions, assumptions, derivations, math questions, algorithm, data description, simulation check | Submitted |
 | 3 | Full implementation on real data, verification vs scikit-learn `MultinomialNB` | Not started |
 | 4 | Analysis, final report, presentation | Not started |
