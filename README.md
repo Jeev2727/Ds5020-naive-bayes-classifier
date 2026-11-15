@@ -35,7 +35,7 @@ The raw dataset is not stored in Git. Download one of these and place it in `dat
 
 ## How to run
 
-Python 3.10+ with the packages in `requirements.txt` (numpy, pandas, matplotlib, scipy).
+Python 3.12+ with the packages in `requirements.txt` (numpy, pandas, matplotlib, scipy).
 
 ```bash
 pip install -r requirements.txt
