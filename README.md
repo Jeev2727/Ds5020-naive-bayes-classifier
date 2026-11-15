@@ -2,7 +2,8 @@
 
 **Team:** Jeevan Mandala, Anand Joel Battula  
 **Project Leader (Iteration 2):** Jeevan Mandala  
-**Repository:** https://github.com/Jeev2727/Ds5020-naive-bayes-classifier
+**Repository:** https://github.com/Jeev2727/Ds5020-naive-bayes-classifier 
+
 **Course:** DS5020 Intro Linear Algebra & Probability, Fall 2026  
 **Current iteration:** 2 (math foundation, data loading, simulation check)
 
