@@ -1,0 +1,16 @@
+=== SMS Spam Collection (UCI SMSSpamCollection) ===
+rows (messages): 5574, raw columns: 2 (label: categorical ham/spam, text: string)
+missing values per column:
+label    0
+text     0
+class counts: ham = 4827, spam = 747, spam share = 0.1340
+exact duplicate texts: 403 (unique messages: 5171); spam share among unique = 0.1263
+tokens per message by class:
+        count   mean    std  min   25%   50%   75%    max
+label                                                    
+ham    4827.0  14.42  11.60  0.0   7.0  11.0  19.0  189.0
+spam    747.0  25.33   5.87  2.0  24.0  27.0  29.0   39.0
+vocabulary size (all messages, our tokenizer): 8919
+empty messages after tokenizing: 2
+document-term matrix X: 5574 x 8919, non-zero entries: 80655 (0.1622% dense)
+stratified split (seed 0): train 4460 (spam 0.1341), test 1114 (spam 0.1338)

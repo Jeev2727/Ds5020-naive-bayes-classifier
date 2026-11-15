@@ -1,0 +1,15 @@
+# raw data stays out of Git (see README)
+data/*
+!data/.gitkeep
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+# LaTeX build files
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.synctex.gz

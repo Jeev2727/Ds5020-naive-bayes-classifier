@@ -1,0 +1,39 @@
+=== Simulation check: Multinomial Naive Bayes ===
+V = 20, L = 3 words/message, n = 2000 (train 1600 / test 400), prior = [0.8 0.2]
+training words per class N_c = [3789 1011]
+
+[Q2] estimated vs true parameters
+  prior: true [0.8 0.2], estimated [0.7894 0.2106]
+  ham: max |theta_hat - theta| = 0.0035, mean = 0.0013
+  spam: max |theta_hat - theta| = 0.0107, mean = 0.0037
+  first five words (true / estimated):
+    w0: ham 0.0251 / 0.0252   spam 0.0019 / 0.0019
+    w1: ham 0.0377 / 0.0357   spam 0.0070 / 0.0087
+    w2: ham 0.0007 / 0.0005   spam 0.0535 / 0.0533
+    w3: ham 0.0001 / 0.0008   spam 0.0402 / 0.0466
+    w4: ham 0.0203 / 0.0197   spam 0.0902 / 0.0873
+  max |exp(log theta, alpha=0) - n_wc/N_c| = 2.78e-17
+  RMS error by training size (mean of 20 runs): n=100: 0.0185, n=300: 0.0121, n=1000: 0.0065, n=3000: 0.0037, n=10000: 0.0021, n=30000: 0.0013
+
+[Q3] Laplace smoothing
+  row sums of smoothed theta: [1. 1.]
+  spam training count of word 0: 0
+  alpha = 0: log-scores (ham, spam) = [-10.36010033         -inf]   <- spam is -inf
+  alpha = 1: log-scores (ham, spam) = [-10.3525 -17.7674]   <- finite
+
+[Q4] decision rule is linear in the counts
+  max |(S_spam - S_ham) - (X w + b)| = 3.55e-15
+  argmax of log-score == argmax of posterior for every test message: True
+  posterior rows sum to 1: max |sum - 1| = 9.99e-16
+  accuracy: estimated parameters 0.9100, true parameters 0.9175
+
+[Q5] precision and recall as conditional probabilities
+  confusion matrix: TP=53, FP=15, FN=21, TN=311
+  precision = P(spam | pred spam)  = 53/68 = 0.7794, 95% Wilson [0.6674, 0.8615]
+  recall    = P(pred spam | spam)  = 53/74 = 0.7162, 95% Wilson [0.6048, 0.8063]
+  Wilson check vs scipy.stats: max diff = 1.11e-16
+  'true' precision/recall of this classifier (200,000 new messages): 0.8476 / 0.7615; inside the Wilson intervals: True / True
+  Wilson 95% coverage for recall over 2000 repeated test sets: 0.946
+
+[Extra] accuracy falls as the two word distributions become more similar
+  t=0.0: 0.922, t=0.1: 0.907, t=0.2: 0.893, t=0.3: 0.880, t=0.4: 0.865, t=0.5: 0.849, t=0.6: 0.839, t=0.7: 0.824, t=0.8: 0.821, t=0.9: 0.801, t=1.0: 0.800
