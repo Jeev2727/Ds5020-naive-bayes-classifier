@@ -3,6 +3,7 @@
 \usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage{booktabs,tabularx,array}
 \usepackage{graphicx}
+\usepackage[section]{placeins}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
@@ -616,14 +617,14 @@ entries, so it is very sparse. Median tokens per message: ham 11 (mean 14.4, max
 \textbf{Split.} Stratified 80/20 split with seed 0: 4,460 training messages and
 1,114 test messages, with spam share 13.41\% and 13.38\% respectively. Duplicates are kept for now; because a duplicate can fall in both train and test, Iteration~3 will also report results on a de-duplicated split.
 
-\begin{figure}[h]
+\begin{figure}[htpb]
 \centering
 \maybefig{data_length_by_class.png}{0.6\textwidth}
 \caption{Tokens per message by class. A visible difference means assumption A5 discards information.}
 \label{fig:length}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htpb]
 \centering
 \maybefig{data_top_words.png}{0.9\textwidth}
 \caption{Most frequent words in each class, as fractions $n_{w,c}/N_c$, i.e.\ the unsmoothed MLE $\hat\theta_{w\mid c}$.}
@@ -644,7 +645,7 @@ y_d\sim\mathrm{Categorical}(\boldsymbol\pi),\quad \boldsymbol\pi=(0.8,0.2);\qqua
 \textbf{Sample size.} $\Vs=20$, $2000$ messages: 1600 for training (3789 ham and 1011 spam
 tokens), 400 for testing; $\alpha=1$.
 
-\begin{table}[h]
+\begin{table}[htpb]
 \centering
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -691,7 +692,7 @@ Accuracy & estimated vs.\ true parameters & 0.910 vs.\ 0.918\\
 \label{tab:checks}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[htpb]
 \centering
 \includegraphics[width=0.47\textwidth]{sim_theta_error_vs_n.png}\hfill
 \includegraphics[width=0.47\textwidth]{sim_accuracy_vs_similarity.png}
