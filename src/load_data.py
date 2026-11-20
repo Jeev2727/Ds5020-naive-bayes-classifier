@@ -16,7 +16,12 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from nb_core import tokenize
+from methods import my_tokenize
+
+
+def tokenize(text):
+    """Iteration 2 tokenizer (keeps apostrophes) so this script's numbers stay unchanged."""
+    return my_tokenize(text, keep_apostrophes=True)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")

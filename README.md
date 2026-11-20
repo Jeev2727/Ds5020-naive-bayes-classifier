@@ -2,28 +2,30 @@
 
 **Team:** Jeevan Mandala, Anand Joel Battula  
 **Project Leader (Iteration 2):** Jeevan Mandala  
-**Repository:** https://github.com/Jeev2727/Ds5020-naive-bayes-classifier 
-
+**Project Leader (Iteration 3):** Anand Joel Battula  
+**Repository:** https://github.com/Jeev2727/Ds5020-naive-bayes-classifier  
 **Course:** DS5020 Intro Linear Algebra & Probability, Fall 2026  
-**Current iteration:** 2 (math foundation, data loading, simulation check)
+**Current iteration:** 3 (small worked example, from-scratch implementation, verification)
 
 We classify SMS messages as spam or ham with a Multinomial Naive Bayes classifier that we
-derive by hand and implement with NumPy. Library routines (scikit-learn) are used only as a
-final comparison in Iteration 3.
+derive by hand and implement with NumPy. scikit-learn is used **only to check** our results.
 
 ## Repository layout
 
 ```
 src/
-  nb_core.py        from-scratch Naive Bayes: tokenizer, count matrix, fit, scores,
-                    log-sum-exp posterior, confusion matrix, Wilson interval
-  hand_example.py   reproduces the hand-worked example (report, Appendix A)
-  load_data.py      loads and describes the SMS Spam Collection, makes data plots,
-                    saves the stratified 80/20 split
-  simulation.py     simulation with known truth (report, Section "Simulation Check")
-data/               raw data goes here (NOT committed, see below)
-figures/            plots and printed results written by the scripts
-docs/               Overleaf report (.tex and PDF) and Excel project plan
+  methods.py           from-scratch Naive Bayes: one my_ function per algorithm step,
+                       with the equation it computes in a comment above it (NumPy only)
+  simulate.py          simulate_nb(n_docs, V, L, seed): the Iteration 2 simulation model
+  small_example.py     Iteration 3 Q1 (tiny example, step by step, exact fractions) and Q2 (underflow)
+  check_simulation.py  simulation test: truth and library comparisons, error vs n, stress test
+  run_real.py          real data: cleaning, fit, comparison with scikit-learn, assumption checks
+  verify.py            report() comparison helper and result-file writer (checks only)
+  load_data.py         Iteration 2: loads and describes the data, makes data plots, stratified split
+  hand_example.py      Iteration 2: hand-worked example (report Appendix A)
+data/                  raw data goes here (NOT committed, see below)
+figures/               plots and printed results written by the scripts
+docs/                  Overleaf reports (.tex, PDF), result files (*_results.tex), Excel plan
 ```
 
 ## Getting the data
@@ -37,17 +39,23 @@ The raw dataset is not stored in Git. Download one of these and place it in `dat
 
 ## How to run
 
-Python 3.12+ with the packages in `requirements.txt` (numpy, pandas, matplotlib, scipy).
+Python 3.12+ with the packages in `requirements.txt` (numpy, pandas, matplotlib, scipy, and
+scikit-learn for the comparisons). With pip: `pip install -r requirements.txt`; with uv: `uv sync`
+and prefix each command with `uv run`.
+
+From the repository root:
 
 ```bash
-pip install -r requirements.txt
-python src/hand_example.py     # code reproduces the hand-worked numbers
-python src/simulation.py       # simulation check -> figures/sim_*.png, figures/simulation_results.txt
-python src/load_data.py        # data description -> figures/data_*.png, figures/data_description.txt
+python src/small_example.py      # Q1, Q2 step by step -> figures/small_example_output.txt, docs/small_results.tex
+python src/check_simulation.py   # simulation test      -> figures/sim3_*.png, figures/check_simulation.txt, docs/sim_results.tex
+python src/run_real.py           # real data + sklearn   -> figures/real_*.png, figures/real_results.txt, docs/real_results.tex
 ```
 
-All randomness uses `np.random.default_rng(seed)` with fixed seeds, so every member gets the
-same numbers.
+Iteration 2 scripts (still runnable): `python src/hand_example.py`, `python src/load_data.py`.
+
+Every number in the Iteration 3 report comes from the three `docs/*_results.tex` files written by
+these scripts. Upload them with `figures/` to Overleaf and recompile; nothing is retyped by hand.
+All randomness uses fixed seeds (`np.random.default_rng(0)`), so every member gets the same numbers.
 
 ## Iteration status
 
@@ -55,5 +63,5 @@ same numbers.
 |---|---|---|
 | 1 | Proposal and math plan | Submitted |
 | 2 | Notation, definitions, assumptions, derivations, math questions, algorithm, data description, simulation check | Submitted |
-| 3 | Full implementation on real data, verification vs scikit-learn `MultinomialNB` | Not started |
+| 3 | Small worked example, from-scratch implementation, simulation test, verification vs scikit-learn, assumption checks | In progress |
 | 4 | Analysis, final report, presentation | Not started |

@@ -10,7 +10,12 @@ By hand: theta_spam = (3,3,2,1)/9, theta_ham = (1,1,3,4)/9,
          P(spam | t1) = 3/7, P(spam | t2) = 2/3.
 """
 import numpy as np
-from nb_core import tokenize, count_matrix, fit, scores, posterior
+from methods import my_tokenize as tokenize, my_count_matrix as count_matrix, my_nb_fit, my_scores as scores, my_posterior as posterior
+
+
+def fit(X, y, alpha=1.0):
+    m = my_nb_fit(X, y, alpha)
+    return m["log_lik"], m["log_prior"], m["C"]
 
 vocab = {"free": 0, "win": 1, "call": 2, "meet": 3}
 train = ["free win free", "win call", "call meet", "meet call meet"]

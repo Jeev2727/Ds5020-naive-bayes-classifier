@@ -1,0 +1,53 @@
+=== 1. Library check: from-scratch vs sklearn MultinomialNB(alpha=1), n = 2000 ===
+predictions matching sklearn: 100.0% of 400
+log priors vs sklearn              max|diff| = 5.55e-17   rel = 3.52e-17
+log P(w|c) vs sklearn              max|diff| = 0.00e+00   rel = 0.00e+00
+joint log-prob vs sklearn          max|diff| = 1.78e-15   rel = 1.82e-17
+posterior P(c|x) vs sklearn        max|diff| = 1.78e-15   rel = 2.32e-16
+
+=== 2. Truth check: estimates vs the parameters we chose ===
+P(w|c) (alpha=1) vs truth          max|diff| = 1.07e-02   rel = 5.30e-02
+P(w|c) (MLE, alpha=0) vs truth     max|diff| = 1.12e-02   rel = 5.35e-02
+  ham : N_c = 3789, ||theta_hat - theta||_2 = 0.0078, max z (MLE) = 2.98
+  spam: N_c = 1011, ||theta_hat - theta||_2 = 0.0216, max z (MLE) = 1.67
+  MLE: fraction of the 40 estimates within 3 standard errors: 100.0%
+  smoothed: max z = 4.73 at class 0, word 3 (true theta = 8.39e-05, count 2); smoothing shifts it by 2.60e-04 = (n+1)/(N+|V|) - n/N, larger than its SE 1.49e-04: bias, not sampling error
+  prior: pi_hat_spam = 0.2106, true 0.2, z = 1.06
+
+=== 3. Error against the truth vs sample size (fit on all n messages, seed 0) ===
+  n =     50: ||err||_2 ham = 0.0869, spam = 0.0829;  vs sklearn 0.0e+00
+  n =    150: ||err||_2 ham = 0.0306, spam = 0.0592;  vs sklearn 0.0e+00
+  n =    500: ||err||_2 ham = 0.0271, spam = 0.0499;  vs sklearn 0.0e+00
+  n =   1500: ||err||_2 ham = 0.0169, spam = 0.0371;  vs sklearn 0.0e+00
+  n =   5000: ||err||_2 ham = 0.0094, spam = 0.0133;  vs sklearn 0.0e+00
+  n =  15000: ||err||_2 ham = 0.0042, spam = 0.0077;  vs sklearn 0.0e+00
+  fitted log-log slopes: ham -0.48, spam -0.41  (theory: -0.5)
+
+=== 4. Q4: confusion matrix on the 400 test messages ===
+  CM = [[TN, FP], [FN, TP]] = [[311, 15], [21, 53]];  max diff vs sklearn = 0
+  precision = 53/68 = 0.7794  95% Wilson [0.6674, 0.8615]
+  recall    = 53/74 = 0.7162  95% Wilson [0.6048, 0.8063]
+
+=== 4. Q5: conditional independence, P(w1,w2|c) / (P(w1|c) P(w2|c)) ===
+  ham : two most frequent words w9, w10: ratio = 1.002; median over 124 frequent pairs = 1.000
+  spam: two most frequent words w16, w7: ratio = 1.009; median over 118 frequent pairs = 0.997
+
+=== 5. Assumption checks on simulated data (all hold by construction) ===
+  A1 calibration: max |predicted - observed| over bins with >= 20 messages = 0.037
+  A1 fraction of posteriors beyond 0.999 or 0.001 = 0.117
+  A4 spam share: train 0.2106, test 0.1850
+  A6 fraction of test tokens unseen in training = 0.0000
+  A2, A3, A5, A7 hold by construction (i.i.d. positions and messages, fixed L = 3, true labels)
+
+=== 6. Stress test: theta_spam <- (1-t) theta_spam + t theta_ham ===
+  t = 0.0: precision = 0.837, recall = 0.764, share predicted spam = 0.182
+  t = 0.1: precision = 0.814, recall = 0.688, share predicted spam = 0.169
+  t = 0.2: precision = 0.802, recall = 0.610, share predicted spam = 0.152
+  t = 0.3: precision = 0.775, recall = 0.555, share predicted spam = 0.143
+  t = 0.4: precision = 0.773, recall = 0.460, share predicted spam = 0.119
+  t = 0.5: precision = 0.782, recall = 0.360, share predicted spam = 0.092
+  t = 0.6: precision = 0.761, recall = 0.286, share predicted spam = 0.075
+  t = 0.7: precision = 0.808, recall = 0.176, share predicted spam = 0.043
+  t = 0.8: precision = 0.864, recall = 0.089, share predicted spam = 0.021
+  t = 0.9: precision = 0.749, recall = 0.053, share predicted spam = 0.014
+  t = 1.0: precision = 0.216, recall = 0.003, share predicted spam = 0.003

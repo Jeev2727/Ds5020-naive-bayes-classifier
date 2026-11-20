@@ -1,0 +1,21 @@
+Misclassified test messages, most confident first
+true | P(spam|x) | text
+spam | 0.0000 | LIFE has never been this much fun and great until you came in. You made it truly special for me. I won't forget you! enjoy @ one gbp/sms
+spam | 0.0000 | Do you realize that in about 40 years, we'll have thousands of old ladies running around with tattoos?
+spam | 0.0000 | Hi ya babe x u 4goten bout me?' scammers getting smart..Though this is a regular vodafone no, if you respond you get further prem rate msg/subscription. Other nos used also. Beware!
+spam | 0.0000 | Hi babe its Chloe, how r u? I was smashed on saturday night, it was great! How was your weekend? U been missing me? SP visionsms.com Text stop to stop 150p/text
+spam | 0.0000 | Would you like to see my XXX pics they are so hot they were nearly banned in the uk!
+spam | 0.0001 | INTERFLORA - It's not too late to order Interflora flowers for christmas call 0800 505060 to place your order before Midnight tomorrow.
+spam | 0.0002 | Can U get 2 phone NOW? I wanna chat 2 set up meet Call me NOW on 09096102316 U can cum here 2moro Luv JANE xx Calls£1/minmoremobsEMSPOBox45PO139WA
+spam | 0.0050 | Your next amazing xxx PICSFREE1 video will be sent to you enjoy! If one vid is not enough for 2day text back the keyword PICSFREE1 to get the next video.
+spam | 0.0161 | Xmas & New Years Eve tickets are now on sale from the club, during the day from 10am till 8pm, and on Thurs, Fri & Sat night this week. They're selling fast!
+spam | 0.0268 | Back 2 work 2morro half term over! Can U C me 2nite 4 some sexy passion B4 I have 2 go back? Chat NOW 09099726481 Luv DENA Calls £1/minMobsmoreLKPOBOX177HP51FL
+ham  | 0.9555 | We have sent JD for Customer Service cum Accounts Executive to ur mail id, For details contact us
+spam | 0.0621 | This message is brought to you by GMW Ltd. and is not connected to the
+spam | 0.0836 | I want some cock! My hubby's away, I need a real man 2 satisfy me. Txt WIFE to 89938 for no strings action. (Txt STOP 2 end, txt rec £1.50ea. OTBox 731 LA1 7WS. )
+ham  | 0.8945 | Have you laid your airtel line to rest?
+ham  | 0.8410 | Total video converter free download type this in google search:)
+spam | 0.1706 | accordingly. I repeat, just text the word ok on your mobile phone and send
+spam | 0.3244 | Check Out Choose Your Babe Videos @ sms.shsex.netUN fgkslpoPW fgkslpo
+ham  | 0.5813 | Finally the match heading towards draw as your prediction.
+ham  | 0.5621 | No calls..messages..missed calls

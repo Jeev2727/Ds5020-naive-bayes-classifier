@@ -1,0 +1,57 @@
+=== Real data: UCI SMSSpamCollection, 5574 messages (747 spam) ===
+cleaning: lower-case, delete apostrophes, other punctuation -> space; rows removed: 0; messages empty after cleaning: 2
+split (seed 0): train 4460 (spam 0.1341), test 1114 (spam 0.1338)
+training vocabulary |V| = 7818;  N_ham = 55091, N_spam = 15157
+
+=== Q3: from-scratch vs sklearn MultinomialNB(alpha=1), same count matrix ===
+predictions matching sklearn: 100.00% of 1114
+log priors vs sklearn              max|diff| = 1.67e-16   rel = 8.27e-17
+log P(w|c) vs sklearn              max|diff| = 0.00e+00   rel = 0.00e+00
+joint log-prob vs sklearn          max|diff| = 3.55e-15   rel = 3.23e-18
+posterior P(c|x) vs sklearn        max|diff| = 1.42e-14   rel = 7.26e-16
+joint log-probabilities range from -1148.6 to -0.1; a difference of 3.6e-15 is 3.1e-18 of the largest value
+
+=== Q4: confusion matrix on the test set ===
+CM = [[TN, FP], [FN, TP]] = [[960, 5], [14, 135]];  max diff vs sklearn = 0
+precision = 135/140 = 0.9643, 95% Wilson [0.9191, 0.9847]
+recall    = 135/149 = 0.9060, 95% Wilson [0.8485, 0.9432]
+accuracy = 0.9829  (always-ham baseline 0.8662)
+
+=== A3: duplicates ===
+test messages whose exact text also appears in training: 133 of 1114
+de-duplicated: 5171 messages (653 spam), |V| = 7666, test 1035
+  precision = 0.9593 [0.9084, 0.9825], recall = 0.9008 [0.8376, 0.9411], accuracy = 0.9826
+dedup: joint log-prob vs sklearn   max|diff| = 1.42e-14   rel = 3.09e-17
+  dedup predictions matching sklearn: 100.00%
+
+linear rule: b = log(pi_1/pi_0) = -1.8653
+largest w (spam evidence): claim 5.60, prize 5.32, 150p 5.13, won 5.07, cs 4.96, tone 4.90, guaranteed 4.79, 18 4.74, www 4.70, 500 4.64
+smallest w (ham evidence): gt -4.48, lt -4.46, he -4.06, lor -3.88, she -3.84, da -3.74, later -3.70, too -3.46, ill -3.43, thats -3.40
+
+=== Q5 / A1: P(w1,w2|c) / (P(w1|c) P(w2|c)) on the training messages ===
+  spam: (free, call): P(w1,w2|c) = 2.18e-04, product = 2.09e-04, ratio = 1.05
+  spam: (claim, prize): P(w1,w2|c) = 1.26e-04, product = 3.16e-05, ratio = 3.99
+  spam: (txt, stop): P(w1,w2|c) = 9.51e-05, product = 5.99e-05, ratio = 1.59
+  spam: median ratio over 492 frequent pairs = 0.96; share with ratio > 2 = 0.03
+  ham : (i, you): P(w1,w2|c) = 1.14e-03, product = 9.28e-04, ratio = 1.23
+  ham : (going, home): P(w1,w2|c) = 9.91e-06, product = 6.09e-06, ratio = 1.63
+  ham : (i, love): P(w1,w2|c) = 2.12e-04, product = 9.92e-05, ratio = 2.14
+  ham : median ratio over 2683 frequent pairs = 0.94; share with ratio > 2 = 0.04
+
+A1 calibration: share of test posteriors beyond 0.999 or 0.001 = 0.856 (simulation 0.117); share confidently wrong = 0.0063
+   bin mean predicted 0.002  observed 0.013  (n = 954)
+   bin mean predicted 0.127  observed 0.077  (n = 13)
+   bin mean predicted 0.239  observed 0.000  (n = 4)
+   bin mean predicted 0.320  observed 0.500  (n = 2)
+   bin mean predicted 0.405  observed 0.000  (n = 1)
+   bin mean predicted 0.572  observed 0.000  (n = 2)
+   bin mean predicted 0.752  observed 1.000  (n = 1)
+   bin mean predicted 0.848  observed 0.714  (n = 7)
+   bin mean predicted 0.999  observed 0.992  (n = 130)
+
+A4 spam share: train 0.1341, test 0.1338
+A6 fraction of test tokens not in the training vocabulary = 0.0600
+A5 spam test messages: correlation between length L and log-odds w^T x + b = 0.23
+A5 recall on spam with < 20 tokens = 0.815 (n = 27), >= 20 tokens = 0.926
+
+A2/A7: 19 misclassified test messages written to figures/real_errors.txt

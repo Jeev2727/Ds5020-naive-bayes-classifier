@@ -1,0 +1,547 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[section]{placeins}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,tabularx,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{../figures/}{figures/}}
+\newcommand{\fillin}[1]{\textcolor{red}{\textbf{[#1]}}}
+\makeatletter
+\newcommand{\resdef}[2]{\expandafter\def\csname res@#1\endcsname{#2}}
+\newcommand{\res}[1]{\ifcsname res@#1\endcsname\csname res@#1\endcsname\else\fillin{#1}\fi}
+\makeatother
+\IfFileExists{small_results.tex}{\input{small_results.tex}}{}
+\IfFileExists{sim_results.tex}{\input{sim_results.tex}}{}
+\IfFileExists{real_results.tex}{\input{real_results.tex}}{}
+\newcommand{\maybefig}[2]{%
+  \IfFileExists{../figures/#1}{\includegraphics[width=#2]{#1}}{%
+  \IfFileExists{figures/#1}{\includegraphics[width=#2]{#1}}{%
+  \fbox{\parbox[c][4cm][c]{#2}{\centering\small Run the scripts\\
+  to create \texttt{figures/\detokenize{#1}}}}}}}
+\newcommand{\owner}[2]{\par\noindent\textit{Owner: #1 \hfill Checked by: #2}\par\medskip}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\Vs}{|\mathcal{V}|}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bw}{\mathbf{w}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\E}{E}
+\DeclareMathOperator{\Cov}{Cov}
+
+\title{DS5020 Final Project -- Iteration 3\\[2pt]
+\large Naive Bayes Spam Classification: Small Worked Example, From-Scratch Implementation and Verification}
+\author{Jeevan Mandala \and Anand Joel Battula}
+\date{Fall 2026}
+
+\setlength{\emergencystretch}{3em}
+\begin{document}
+\maketitle
+
+\noindent\textbf{Project Leader (Iteration 3):} Anand Joel Battula\\
+\textbf{Repository:} \url{https://github.com/Jeev2727/Ds5020-naive-bayes-classifier}\\
+\textbf{Overleaf:} \href{https://www.overleaf.com/project/6b00d37c0b39a891f5669bfb/share#b636ef3bb6d1cd0b79b8563a9355bf45898555bc0a6e8363}{\texttt{Overleaf code}}
+
+\medskip
+\noindent Notation, definitions, assumptions A1--A7 and Theorems 1--10 are those of the Iteration 2
+report; theorem numbers below refer to it unless they are new (Proposition~\ref{prop:pairs}).
+Dataset, simulation model, parameter values and seed are unchanged from Iteration 2. The one
+change is the tokenizer, which now deletes apostrophes as the Iteration 3 brief asks
+(Section~\ref{sec:real}).
+
+\tableofcontents
+
+%======================================================================
+\section{Team and Ownership}
+Anand Joel Battula leads this iteration (he had not led before) and checked that each member
+owns part of the math and part of the code.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXll@{}}
+\toprule
+Part & Content & Owner & Checker\\
+\midrule
+Math & Q1 worked example, Q2 underflow (\S\ref{sec:q1}--\ref{sec:q2}) & Jeevan & Anand\\
+Math & Q3 library comparison, Q4 confusion matrix, Q5 conditional independence with Proposition~\ref{prop:pairs} (\S\ref{sec:q3}--\ref{sec:q5}) & Anand & Jeevan\\
+Math & Simulation test and stress test analysis (\S\ref{sec:sim}) & Jeevan & Anand\\
+Math & Assumption checks (\S\ref{sec:assump}) & Anand & Jeevan\\
+Code & \texttt{methods.py}, \texttt{simulate.py}, \texttt{small\_example.py} & Jeevan & Anand\\
+Code & \texttt{check\_simulation.py}, \texttt{run\_real.py}, \texttt{verify.py} & Anand & Jeevan\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+%======================================================================
+\section{Code-to-Math Map}\label{sec:map}
+Every numbered step of the Iteration 2 algorithm is one NumPy function in \texttt{src/methods.py},
+with the equation in a comment above it. The same functions run the small example, the simulation
+and the real data. scikit-learn and \texttt{numpy.linalg} appear only in the check scripts.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}c>{\raggedright\arraybackslash}X l>{\raggedright\arraybackslash}p{4.3cm}@{}}
+\toprule
+Step & Equation & Source & Function in \texttt{methods.py}\\
+\midrule
+0 & tokens $w_1,\dots,w_L$; $\V$ from training; $X_{dw}=x_{dw}$ & Def.~9 & \texttt{my\_tokenize}\newline\texttt{my\_build\_vocab}\newline\texttt{my\_count\_matrix}\\
+1 & $Y_{dc}=\mathbf 1\{y_d=c\}$;\ \ $C=Y^\top X$ & \S8 & \texttt{my\_one\_hot}\newline\texttt{my\_class\_counts}\\
+2 & $\mathbf N=C\mathbf 1$ & \S8 & \texttt{my\_class\_totals}\\
+3 & $\log\theta_{w\mid c}=\log(n_{w,c}+\alpha)-\log(N_c+\alpha\Vs)$ & Thm.~4 & \texttt{my\_log\_likelihoods}\\
+4 & $\log\pi_c=\log\big((Y^\top\mathbf 1)_c/n\big)$ & Thm.~2 & \texttt{my\_log\_priors}\\
+5 & $S=X(\log\Theta)^\top+\mathbf 1\log\boldsymbol\pi^\top$;\ \ $\bw=\log\boldsymbol\theta_1-\log\boldsymbol\theta_0$, $b=\log\frac{\pi_1}{\pi_0}$ & Thm.~6 & \texttt{my\_scores}\newline\texttt{my\_linear\_rule}\\
+6 & $\hat y_d=\argmax_cS_{dc}$; posterior by log-sum-exp & Prop.~5, 9 & \texttt{my\_predict}\newline\texttt{my\_posterior}\\
+7 & $CM=Y_{\text{true}}^\top Y_{\text{pred}}$; precision, recall; Wilson interval & Def.~10, Thm.~10 & \texttt{my\_confusion\_matrix}\newline\texttt{my\_precision\_recall}\newline\texttt{my\_wilson}\\
+Q5 & $\hat P(w_1,w_2\mid c)=(X_c^\top X_c)_{w_1w_2}\big/\sum_dL_d(L_d-1)$ & Prop.~\ref{prop:pairs} & \texttt{my\_pair\_ratio\_matrix}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The wrappers \texttt{my\_nb\_fit} (steps 1--4) and \texttt{my\_nb\_predict} (steps 5--6) have the
+interface used in the brief's starter code. Note that the confusion matrix is itself a matrix
+product: entry $(i,j)$ of $Y_{\text{true}}^\top Y_{\text{pred}}$ counts messages with $y=i$ and $\hat y=j$.
+
+%======================================================================
+\section{Iteration 3 -- Math Questions}\label{sec:questions}
+
+%----------------------------------------------------------------------
+\subsection{Q1. Small worked example, step by step}\label{sec:q1}
+Computed exactly with \texttt{fractions.Fraction} and, separately, with the floating-point
+functions of \texttt{methods.py} (\texttt{src/small\_example.py}).
+
+\textbf{Data.} $\V=(\text{free},\text{win},\text{call},\text{meet},\text{home})$, $\Vs=5$, $\alpha=1$.
+\begin{center}
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+Message & Class & free & win & call & meet & home\\
+\midrule
+$d_1$ ``free win call'' & spam & 1 & 1 & 1 & 0 & 0\\
+$d_2$ ``win free free'' & spam & 2 & 1 & 0 & 0 & 0\\
+$d_3$ ``call win'' & spam & 0 & 1 & 1 & 0 & 0\\
+$d_4$ ``meet home'' & ham & 0 & 0 & 0 & 1 & 1\\
+$d_5$ ``call meet home meet'' & ham & 0 & 0 & 1 & 2 & 1\\
+\midrule
+new: ``free call home'' & ? & 1 & 0 & 1 & 0 & 1\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Step 1: class counts} $C=Y^\top X$ (Iteration 2, \S8). The rows of $Y$ are
+$(0,1)$ for $d_1,d_2,d_3$ and $(1,0)$ for $d_4,d_5$, so row 0 of $C$ sums the ham rows of $X$ and row 1 the spam rows:
+\[
+C=\begin{pmatrix}0&0&1&3&2\\3&3&2&0&0\end{pmatrix}\quad(\text{ham},\ \text{spam}).
+\]
+\textbf{Step 2: totals} $\mathbf N=C\mathbf 1=(6,\,8)^\top$.
+
+\textbf{Step 3: smoothed likelihoods} (Theorem 4), $\theta_{w\mid c}=(n_{w,c}+1)/(N_c+5)$:
+\[
+\boldsymbol\theta_{\text{ham}}=\Big(\tfrac1{11},\tfrac1{11},\tfrac2{11},\tfrac4{11},\tfrac3{11}\Big),\qquad
+\boldsymbol\theta_{\text{spam}}=\Big(\tfrac4{13},\tfrac4{13},\tfrac3{13},\tfrac1{13},\tfrac1{13}\Big).
+\]
+\textbf{Step 4: priors} (Theorem 2): $\pi_{\text{ham}}=2/5$, $\pi_{\text{spam}}=3/5$.
+
+\textbf{Step 5a: classify with probabilities} (Theorem 1), using only the words that occur:
+\[
+\text{ham: }\tfrac25\cdot\tfrac1{11}\cdot\tfrac2{11}\cdot\tfrac3{11}=\tfrac{12}{6655},\qquad
+\text{spam: }\tfrac35\cdot\tfrac4{13}\cdot\tfrac3{13}\cdot\tfrac1{13}=\tfrac{36}{10985}.
+\]
+The normalizer is $P(\bx)=\frac{12}{6655}+\frac{36}{10985}=\frac{14856}{2924207}$, so
+\[
+P(\text{spam}\mid\bx)=\frac{36/10985}{14856/2924207}=\frac{3993}{6190}\approx\res{smPostSpam},
+\qquad P(\text{ham}\mid\bx)=\frac{2197}{6190}.
+\]
+Prediction: spam.
+
+\textbf{Step 5b: classify with logs} (Theorem 6): $s_c=\log\pi_c+\sum_wx_w\log\theta_{w\mid c}$ gives
+$s_{\text{ham}}=\log\frac{12}{6655}=-6.318217$ and $s_{\text{spam}}=\log\frac{36}{10985}=-5.720767$.
+The larger log-score is spam, the same class as in Step 5a (Proposition 5).
+
+\textbf{Step 6: posterior by log-sum-exp} (Proposition 9): with $M=s_{\text{spam}}$,
+$P(\text{spam}\mid\bx)=1/(1+e^{s_{\text{ham}}-M})=0.645073$, equal to $3993/6190$.
+
+\textbf{Linear rule.} $\bw=\log\boldsymbol\theta_{\text{spam}}-\log\boldsymbol\theta_{\text{ham}}
+=(1.2192,\,1.2192,\,0.2384,\,-1.5533,\,-1.2657)$ and $b=\log\frac{3/5}{2/5}=\log\frac32=0.4055$. Then
+$\bw^\top\bx+b=1.2192+0.2384-1.2657+0.4055=0.5974=\log\frac{3993}{2197}$, the log of the spam-to-ham
+odds, and it is positive, so the rule predicts spam.
+
+\textbf{Second-way checks.}
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item Rows of $\Theta$ sum to $11/11$ and $13/13$ exactly (Theorem 4).
+\item The two posteriors sum to exactly 1: $2197/6190+3993/6190=1$.
+\item Substituting back into Bayes' theorem: $\pi_{\text{spam}}P(\bx\mid\text{spam})/P(\bx)=3993/6190$.
+\item The probability route and the log route predict the same class.
+\item Code vs exact fractions: max $|\Theta|$ difference $\res{smThetaDiff}$, $|P(\text{spam}\mid\bx)|$
+difference $\res{smPostDiff}$, log-odds difference $\res{smOddsDiff}$ (rounding level).
+\end{enumerate}
+\owner{Jeevan Mandala}{Anand Joel Battula}
+
+%----------------------------------------------------------------------
+\subsection{Q2. The underflow problem}\label{sec:q2}
+Multiplying 500 probabilities of 0.01 should give $10^{-1000}$. In double precision the smallest
+positive number is about $5\times10^{-324}$, so the running product becomes subnormal
+($10^{-322}$ after 161 factors) and is exactly \texttt{0.0} after \res{smUnderflowAt} factors; the final
+product is \texttt{0.0}. With logs the same score is
+\[
+\sum_{j=1}^{500}\log 0.01=500\log 0.01=\res{smLogSum},
+\]
+a perfectly ordinary number (log of a product is a sum of logs). The failure matters for
+classification: if one class has probabilities 0.010 and the other 0.012, both products are
+\texttt{0.0} and cannot be compared, while the log-scores $-2302.59$ and $-2211.42$ differ by
+$500\log1.2=91.16$, a decisive margin. Real SMS messages are short (median 11 and 27 tokens),
+but the log form costs nothing and also turns the product into the matrix product of Step 5.
+\owner{Jeevan Mandala}{Anand Joel Battula}
+
+%----------------------------------------------------------------------
+\subsection{Q3. Comparison with \texttt{MultinomialNB(alpha=1)}}\label{sec:q3}
+Both models are fitted on the \emph{same} count matrix, so they compute the same formula from the
+same numbers.
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Quantity & Simulation ($n=2000$) & Real data\\
+\midrule
+matching predictions & \res{simMatch}\% & \res{realMatch}\%\\
+$\max|\log\hat\pi_{\text{ours}}-\log\hat\pi_{\text{lib}}|$ & $\res{simErrPrior}$ & $\res{realErrPrior}$\\
+$\max|\log\Theta_{\text{ours}}-\log\Theta_{\text{lib}}|$ & $\res{simErrLik}$ & $\res{realErrLik}$\\
+$\max|S_{\text{ours}}-S_{\text{lib}}|$ (joint log-prob) & $\res{simErrJoint}$ & $\res{realErrJoint}$\\
+$\max|P(c\mid\bx)_{\text{ours}}-P(c\mid\bx)_{\text{lib}}|$ & $\res{simErrPost}$ & $\res{realErrPost}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Why the differences are this size.} scikit-learn computes
+$\log(C+\alpha)-\log(N+\alpha\Vs)$ with the same floating-point operations as Step 3, so $\log\Theta$
+agrees to the last bit or within one rounding unit. The joint log-probabilities are sums of many
+terms; adding them in a different order can change the last bit, and one unit in the last place of a
+double is about $2.2\times10^{-16}$ times the size of the number (machine epsilon). On the real data
+the scores reach $|\res{realSMin}|$, yet the largest difference is only $\res{realErrJoint}$, a relative
+error of $\res{realRelJoint}$, below machine epsilon: the two implementations differ by less than one
+rounding unit. This is far below the pass criterion $10^{-10}$, and there is no sign or scaling
+convention to fix: unlike eigenvectors, these quantities are uniquely defined. The posteriors differ by up to
+$\res{realErrPost}$ because $P(c\mid\bx)=e^{s_c-\log Z}$ amplifies rounding in the exponent, but this
+is still nine orders of magnitude below the pass criterion.
+\owner{Anand Joel Battula}{Jeevan Mandala}
+
+%----------------------------------------------------------------------
+\subsection{Q4. Confusion matrix, precision and recall}\label{sec:q4}
+With $CM=Y_{\text{true}}^\top Y_{\text{pred}}=\begin{psmallmatrix}\mathrm{TN}&\mathrm{FP}\\ \mathrm{FN}&\mathrm{TP}\end{psmallmatrix}$
+(our matrix equals \texttt{sklearn.metrics.confusion\_matrix}, max difference \res{realCMDiff}):
+\begin{center}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Test set & TN & FP & FN & TP & accuracy\\
+\midrule
+Real, all messages (\res{realTest}) & \res{realTN} & \res{realFP} & \res{realFN} & \res{realTP} & \res{realAcc}\\
+Real, de-duplicated (\res{dedupTest}) & \res{dedupTN} & \res{dedupFP} & \res{dedupFN} & \res{dedupTP} & \res{dedupAcc}\\
+Simulation (400) & \res{simTN} & \res{simFP} & \res{simFN} & \res{simTP} & --\\
+\bottomrule
+\end{tabular}
+
+\medskip
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Test set & precision [95\% Wilson] & recall [95\% Wilson]\\
+\midrule
+Real, all messages & \res{realPrec}\ \res{realPrecCI} & \res{realRec}\ \res{realRecCI}\\
+Real, de-duplicated & \res{dedupPrec}\ \res{dedupPrecCI} & \res{dedupRec}\ \res{dedupRecCI}\\
+Simulation & \res{simPrec}\ \res{simPrecCI} & \res{simRec}\ \res{simRecCI}\\
+\bottomrule
+\end{tabular}
+\end{center}
+Precision is the estimate of $P(\text{spam}\mid\text{predicted spam})$, computed from the
+$\mathrm{TP}+\mathrm{FP}$ flagged messages; recall estimates $P(\text{predicted spam}\mid\text{spam})$
+from the $\mathrm{TP}+\mathrm{FN}$ spam messages (Proposition 7). The always-ham baseline has accuracy
+\res{realBase} on the real test set and recall 0, which is why accuracy alone is not informative here.
+
+\textbf{What this means for the data.} Of the \res{realTP}${}+{}$\res{realFP} messages the classifier
+flags, \res{realTP} are spam: a flagged message is spam with estimated probability \res{realPrec}
+(95\% interval \res{realPrecCI}). Of the \res{realTP}${}+{}$\res{realFN} spam messages it catches
+\res{realTP}, so a spam message is caught with probability \res{realRec} \res{realRecCI}. The errors are
+asymmetric: only \res{realFP} of the \res{realTN}${}+{}$\res{realFP} ham messages are flagged, which
+matters because a lost real message costs more than a missed spam. The recall interval is wider
+because it rests on the 149 spam messages rather than the 140 flagged ones and its centre is further
+from 1. After removing duplicates, precision and recall change by less than 0.01 and stay inside the
+original intervals, so the \res{realLeak} test messages that also appear in training do not drive the
+result (assumption A3).
+\owner{Anand Joel Battula}{Jeevan Mandala}
+
+%----------------------------------------------------------------------
+\subsection{Q5. Is conditional independence true?}\label{sec:q5}
+For a pair of different words we compare the probability that two different token positions of a
+class-$c$ message hold $w_1$ and $w_2$ with the product $P(w_1\mid c)P(w_2\mid c)$. Proposition~\ref{prop:pairs}
+gives an estimator whose ratio to the product is 1 when Assumption A1 holds.
+
+\begin{proposition}\label{prop:pairs}
+Under Assumption 1, for a class-$c$ message of length $L$ and words $w_1\neq w_2$,
+$\E[x_{w_1}x_{w_2}\mid L,c]=L(L-1)\,\theta_{w_1\mid c}\theta_{w_2\mid c}$. Hence
+\[
+\hat P(w_1,w_2\mid c)=\frac{\sum_{d:\,y_d=c}x_{dw_1}x_{dw_2}}{\sum_{d:\,y_d=c}L_d(L_d-1)}
+=\frac{(X_c^\top X_c)_{w_1w_2}}{\sum_dL_d(L_d-1)}
+\]
+estimates $\theta_{w_1\mid c}\theta_{w_2\mid c}$, and the ratio
+$\hat P(w_1,w_2\mid c)/(\hat\theta_{w_1\mid c}\hat\theta_{w_2\mid c})$ is close to 1 for large samples.
+\end{proposition}
+\begin{proof}
+Given $L$ and $c$, the counts are multinomial (Definition 4) with $\E[x_w]=L\theta_w$ and, for
+$w_1\ne w_2$, $\Cov(x_{w_1},x_{w_2})=-L\theta_{w_1}\theta_{w_2}$ (write $x_w=\sum_j\mathbf 1\{W_j=w\}$ and use
+bilinearity of covariance: terms with the same position give $-\theta_{w_1}\theta_{w_2}$, since one
+position cannot hold both words; terms with different positions are 0 by independence). By the
+definition of covariance,
+$\E[x_{w_1}x_{w_2}]=\Cov+\E[x_{w_1}]\E[x_{w_2}]=-L\theta_{w_1}\theta_{w_2}+L^2\theta_{w_1}\theta_{w_2}=L(L-1)\theta_{w_1}\theta_{w_2}$.
+Summing over the class-$c$ messages (linearity of expectation) shows that the numerator has
+expectation $\theta_{w_1}\theta_{w_2}\sum_dL_d(L_d-1)$. The sum $\sum_d x_{dw_1}x_{dw_2}$ is entry
+$(w_1,w_2)$ of $X_c^\top X_c$ by the definition of matrix multiplication. By the law of large
+numbers both $\hat P(w_1,w_2\mid c)$ and $\hat\theta_{w_1}\hat\theta_{w_2}$ converge to
+$\theta_{w_1}\theta_{w_2}$, so the ratio converges to 1.
+\end{proof}
+Using document-level presence (``both words appear'') instead would \emph{not} give 1 even when A1
+holds, because a fixed length $L$ makes presence events dependent; the token-pair estimator avoids this.
+
+\textbf{Simulation} (A1 true by construction, 200{,}000 messages): ratio for the two most frequent
+ham words \res{simPairRatioHam}, spam words \res{simPairRatioSpam}; median over frequent pairs
+\res{simPairMedianHam} (ham) and \res{simPairMedianSpam} (spam). This is what ``passing'' looks like.
+
+\textbf{Real data} (training messages):
+\begin{center}
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Class & Words & $\hat P(w_1,w_2\mid c)$ & $\hat\theta_{w_1\mid c}\hat\theta_{w_2\mid c}$ & ratio\\
+\midrule
+\res{realPairRows}\\
+\bottomrule
+\end{tabular}
+\end{center}
+Over the frequent pairs (expected pair count above 20; the real data are much sparser than the
+200{,}000 simulated messages), the median ratio is \res{realPairMedianSpam}
+in spam (\res{realPairCountSpam} pairs, share above 2: \res{realPairShareTwoSpam}) and
+\res{realPairMedianHam} in ham (\res{realPairCountHam} pairs, share above 2: \res{realPairShareTwoHam}),
+compared with 1.00 in the simulation. So the \emph{typical} pair is close to independent, while a
+tail of pairs is strongly dependent. Medians slightly below 1 are expected when a class is a mixture
+of sub-topics (prize spam and dating spam; work and family messages): words from the same sub-topic
+co-occur more often than the class-level product predicts (ratio above 1), and words from different
+sub-topics less often (ratio below 1). The model's single $\boldsymbol\theta_c$ per class averages
+over these sub-topics.
+
+\textbf{Answer: conditional independence does not hold exactly.} Some pairs are close to
+independent: \texttt{free} and \texttt{call} have ratio 1.05, so knowing that one token of a spam
+message is ``free'' barely changes the chance that another is ``call''. Others are strongly
+dependent: \texttt{claim} and \texttt{prize} co-occur about 4 times as often as independence predicts,
+because they belong to the same fixed phrases (``claim your prize''); \texttt{txt}/\texttt{stop}
+(1.59) and, in ham, \texttt{i}/\texttt{love} (2.14) follow the same pattern. Ratios above 1 mean the
+classifier counts the evidence of a phrase once per word, so $|\bw^\top\bx+b|$ is too large and the
+posteriors are too extreme (Section~\ref{sec:assump}, A1). The argmax is still usually right, which is
+why precision and recall remain high.
+\owner{Anand Joel Battula}{Jeevan Mandala}
+
+%======================================================================
+\section{Simulation Test: Recovering the Known Truth}\label{sec:sim}
+\textbf{Model.} Unchanged from Iteration 2: $\pi=(0.8,0.2)$, $\boldsymbol\theta_0,\boldsymbol\theta_1\sim
+\mathrm{Dir}(\mathbf 1_{20})$, $L=3$, seed 0. \texttt{simulate\_nb} in \texttt{src/simulate.py} draws
+the random numbers in the Iteration 2 order, so it reproduces the Iteration 2 data exactly
+(e.g.\ $N_{\text{ham}}=\res{simNHam}$, $N_{\text{spam}}=\res{simNSpam}$, $\hat\pi_{\text{spam}}=\res{simPiSpam}$).
+
+\textbf{Against the library.} \res{simMatch}\% of predictions match and all quantities agree to
+$\res{simErrJoint}$ or better (Section~\ref{sec:q3}). At every sample size in Figure~\ref{fig:errn}
+the largest difference from scikit-learn is $\res{simLibMaxAllN}$.
+
+\textbf{Against the truth.} The maximum-likelihood estimate $\hat\theta_{w\mid c}=n_{w,c}/N_c$ has
+standard error $\sqrt{\theta_{w\mid c}(1-\theta_{w\mid c})/N_c}$ (binomial proportion). With
+$N_{\text{ham}}=\res{simNHam}$ and $N_{\text{spam}}=\res{simNSpam}$ training tokens, \res{simWithin}\% of
+the 40 MLE estimates lie within 3 standard errors (largest $z$: \res{simMaxZHam} ham,
+\res{simMaxZSpam} spam), and $\hat\pi_{\text{spam}}$ is \res{simPiZ} standard errors from 0.2. The
+smoothed estimates are within $\|\hat{\boldsymbol\theta}_c-\boldsymbol\theta_c\|_2=\res{simTrueErrHam}$ (ham)
+and \res{simTrueErrSpam} (spam). The spam row is less accurate because spam is only 20\% of the
+messages, so $N_{\text{spam}}$ is about a quarter of $N_{\text{ham}}$ and its standard errors are about
+twice as large ($\sqrt{4}=2$).
+
+\textbf{Smoothing bias.} One smoothed ham estimate is \res{simSmoothMaxZ} standard errors from the
+truth. Its true probability is $\res{simRareTheta}$ and it was seen \res{simRareCount} times. Laplace
+smoothing moves it by $(n+1)/(N+\Vs)-n/N=\res{simRareBias}$, which is larger than its standard error
+$\res{simRareSE}$. This is the bias of the Dirichlet posterior mean (Theorem 8) for a very rare word,
+not sampling error, and it vanishes as $N_c\to\infty$.
+
+\begin{figure}[htbp]
+\centering
+\maybefig{sim3_error_vs_n.png}{0.48\textwidth}\hfill
+\maybefig{sim3_stress_precision_recall.png}{0.48\textwidth}
+\caption{Left: error against the truth for $n=50$ to $15{,}000$ simulated messages (fitted log--log slopes
+\res{simSlopeHam} ham, \res{simSlopeSpam} spam; theory $-1/2$). Right: stress test.}
+\label{fig:errn}
+\end{figure}
+
+\textbf{Error against $n$.} The error at $n=50$, $500$, $5000$ is \res{simErrNFifty},
+\res{simErrNFiveHundred} and \res{simErrNFiveThousand} (both classes combined). The fitted slopes
+\res{simSlopeHam} and \res{simSlopeSpam} are close to $-1/2$, the rate $1/\sqrt{N_c}$ of the standard error.
+
+\textbf{Stress test: classes that become identical.} We set
+$\boldsymbol\theta_{\text{spam}}\leftarrow(1-t)\boldsymbol\theta_{\text{spam}}+t\boldsymbol\theta_{\text{ham}}$,
+which breaks the premise that word distributions separate the classes. Recall falls from
+\res{stressRecZero} at $t=0$ to \res{stressRecHalf} at $t=0.5$ and \res{stressRecNine} at $t=0.9$
+(Figure~\ref{fig:errn}, right). Precision stays near 0.8 until $t\approx0.9$: as $\bw\to\mathbf 0$ the
+prior term $b=\log(0.2/0.8)<0$ dominates, so the classifier flags fewer messages, but the few it flags
+still have strongly spam-like words. At $t=1$ the classes are identical, almost nothing is flagged, and
+precision falls to the base rate 0.2, since a flagged message is then spam only by chance.
+\owner{Jeevan Mandala}{Anand Joel Battula}
+
+%======================================================================
+\section{Real Data}\label{sec:real}
+\textbf{Cleaning steps} (all in \texttt{src/run\_real.py}):
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item Load the UCI file: \res{realN} messages, \res{realSpam} spam. \textbf{Rows removed: 0.}
+\item Lower-case; delete apostrophes (\texttt{don't}$\to$\texttt{dont}); replace every other character
+outside \texttt{[a-z0-9]} by a space; tokens are the remaining words. This removes all punctuation as
+the brief asks; in Iteration 2 apostrophes were kept inside words, so the vocabulary changes slightly.
+\res{realEmpty} messages contain no tokens and are kept (they are classified by the prior alone).
+\item Stratified 80/20 split with seed 0 (the Iteration 2 split): \res{realTrain} training and
+\res{realTest} test messages, spam share \res{realShareTr}\% and \res{realShareTe}\%.
+\item Vocabulary from the training messages only: $\Vs=\res{realV}$; $N_{\text{ham}}=\res{realNHam}$,
+$N_{\text{spam}}=\res{realNSpam}$ tokens.
+\item Second run: remove exact duplicate texts first (\res{realUnique} unique messages), then split
+and fit in the same way.
+\end{enumerate}
+
+The tokenizer change reduces the training vocabulary from 7{,}905 (Iteration 2) to \res{realV}
+words, because forms such as \texttt{don't} and \texttt{dont} now coincide.
+
+\textbf{What the linear rule learned.} The largest weights $w_j=\log\theta_{j\mid\text{spam}}-\log\theta_{j\mid\text{ham}}$
+(words seen at least 10 times) are \res{realTopSpam}; the most negative are \res{realTopHam}
+(Figure~\ref{fig:weights}). For example, one occurrence of \res{realTopSpamWord} multiplies the
+spam-to-ham odds by $e^{\res{realTopSpamW}}\approx 270$. The bias is $b=\log(\pi_1/\pi_0)=\res{realB}$,
+so a message with no informative words is classified as ham. The spam words are those of prize and
+premium-rate messages (\texttt{claim}, \texttt{prize}, \texttt{won}, \texttt{guaranteed}, \texttt{150p},
+\texttt{www}); the ham words are personal and conversational (\texttt{he}, \texttt{she}, \texttt{later},
+\texttt{lor}, \texttt{da}). The two strongest ham words, \texttt{gt} and \texttt{lt}, are an artifact
+of the dataset: the corpus replaces numbers and names in personal messages by the HTML codes
+\texttt{\&lt;\#\&gt;}, and removing punctuation leaves the tokens \texttt{lt} and \texttt{gt}. They
+are therefore genuine evidence of a personal message in this corpus, but would not carry over to new data.
+
+\begin{figure}[htbp]
+\centering
+\maybefig{real_top_weights.png}{0.85\textwidth}
+\caption{Words with the most negative and most positive weights $w$ in the decision rule $\bw^\top\bx+b$.}
+\label{fig:weights}
+\end{figure}
+
+%======================================================================
+\section{Verification Table}\label{sec:verify}
+Every number is produced by a script in \texttt{src/}.
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.4cm}c@{}}
+\toprule
+Data & Quantity & Compared with & Difference & Pass?\\
+\midrule
+Small example & $\Theta$, $P(\text{spam}\mid\bx)$ & exact fractions & $\res{smThetaDiff}$, $\res{smPostDiff}$ & \checkmark\\
+Small example & probability vs log route & same class & identical & \checkmark\\
+Simulation ($n=2000$) & predictions & \texttt{MultinomialNB} & \res{simMatch}\% match & \checkmark\\
+Simulation ($n=2000$) & joint log-prob $S$ & \texttt{MultinomialNB} & $\max|\cdot|=\res{simErrJoint}$ & \checkmark\\
+Simulation ($n=2000$) & $\hat\theta$ (MLE) & true $\theta$ & \res{simWithin}\% within 3 SE & \checkmark\\
+Simulation ($n=50\ldots15000$) & error slope & $-1/2$ & \res{simSlopeHam}, \res{simSlopeSpam} & \checkmark\\
+Simulation (Q5) & pair ratio & 1 & median \res{simPairMedianHam}, \res{simPairMedianSpam} & \checkmark\\
+Simulation (stress) & recall at $t=0.9$ & falls toward 0 & \res{stressRecNine} & \checkmark\\
+Real data & predictions & \texttt{MultinomialNB} & \res{realMatch}\% match & \checkmark\\
+Real data & $\log\Theta$ & \texttt{MultinomialNB} & $\max|\cdot|=\res{realErrLik}$ & \checkmark\\
+Real data & joint log-prob $S$ & \texttt{MultinomialNB} & $\max|\cdot|=\res{realErrJoint}$, rel.\ $\res{realRelJoint}$ & \checkmark\\
+Real data & confusion matrix & \texttt{sklearn.metrics} & \res{realCMDiff} & \checkmark\\
+Real data (dedup) & joint log-prob $S$ & \texttt{MultinomialNB} & $\max|\cdot|=\res{dedupErrJoint}$ & \checkmark\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\owner{Anand Joel Battula}{Jeevan Mandala}
+
+%======================================================================
+\section{Assumption Checks}\label{sec:assump}
+Each check runs on the simulation first, where the assumption holds by construction, so that we know
+what a pass looks like.
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3.6cm}@{}}
+\toprule
+Assumption & Check & Simulation & Real data\\
+\midrule
+A1 conditional independence & pair ratio (Q5); share of posteriors beyond 0.999 or 0.001; calibration (Fig.~\ref{fig:calib}) & ratio $\approx1$; extreme \res{simExtreme}; max bin gap \res{simCalGap} & median ratio \res{realPairMedianSpam} (spam), \res{realPairMedianHam} (ham); extreme \res{realExtreme}; confidently wrong \res{realWrongConf}\\
+A2 bag of words & read the misclassified messages (\texttt{figures/real\_errors.txt}) & holds by construction & fails for chatty spam and promotional words used personally\\
+A3 i.i.d.\ messages & test texts also in training; de-duplicated rerun & holds by construction & \res{realLeak} leaked; dedup precision \res{dedupPrec}, recall \res{dedupRec}\\
+A4 same distribution & spam share train/test & \res{simShareTr} / \res{simShareTe} & \res{realShareTr}\% / \res{realShareTe}\%\\
+A5 length uninformative & correlation of $L$ with $\bw^\top\bx+b$ (spam); recall by length & $L=3$ fixed & corr.\ \res{realLenCorr}; recall \res{realRecShort} ($L<20$, $n=\res{realNShort}$) vs \res{realRecLong}\\
+A6 closed vocabulary & share of test tokens not in $\V$ & \res{simOOV} & \res{realOOV}\\
+A7 correct labels & most confident errors & holds by construction & mostly holds; 2 fragments, 1 doubtful label\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Findings on the real data.}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{A1 fails, as expected.} Besides the pair ratios of Q5, \res{realExtreme} of the real test
+posteriors are beyond 0.999 or 0.001, against \res{simExtreme} in the simulation where A1 holds.
+The model is overconfident: in the lowest bin it predicts $P(\text{spam})\approx0.002$ on average,
+but 1.3\% of those messages are spam, and \res{realWrongConf} of all test messages are wrong with
+confidence above 0.999. The probabilities should therefore be read as a ranking, not as exact
+frequencies; the decisions are still good.
+\item \textbf{A3 holds in practice.} \res{realLeak} test messages also occur in training, but the
+de-duplicated run gives almost the same precision and recall (Section~\ref{sec:q4}).
+\item \textbf{A4 holds} by the stratified split (\res{realShareTr}\% vs \res{realShareTe}\% spam).
+\item \textbf{A5 fails mildly.} Length carries information the model ignores: recall is
+\res{realRecShort} on short spam ($L<20$, $n=\res{realNShort}$) but \res{realRecLong} on longer spam.
+Short spam has fewer words to add evidence to $\bw^\top\bx$, and the prior term $b<0$ then wins.
+\item \textbf{A6:} \res{realOOV} of test tokens (6\%) are not in the training vocabulary and are
+dropped. This loses some evidence (often new numbers or misspellings) but cannot produce $\log0$.
+\item \textbf{A2 (bag of words) explains most errors.} Reading the \res{realNErr} misclassified
+messages (\texttt{figures/real\_errors.txt}): of the \res{realFN} missed spam messages, about half are
+written like personal messages (``Hi babe its Chloe, how r u?'', ``Can U get 2 phone NOW?''), so their
+words are ham words; what marks them as spam is the structure, a chatty opening followed by a
+premium-rate sign-off, which word counts cannot see. Of the \res{realFP} false alarms, most contain
+words that are usually promotional but are used in a personal sense: ``free download'', ``contact us'',
+``customer service'', ``missed calls''.
+\item \textbf{A6 interacts with the errors.} Spam sign-offs are often written without spaces
+(``\texttt{Calls\pounds1/min\allowbreak moremobs\allowbreak EMSPOBox\allowbreak 45PO139WA}''), so cleaning produces long one-off tokens that are not
+in $\V$ and are dropped, removing exactly the evidence that would have flagged the message.
+\item \textbf{A7 (labels) is mostly fine, with two kinds of doubt.} Two spam messages are fragments
+of longer messages (``\dots and is not connected to the'', ``accordingly. I repeat, just text the word
+ok\dots''), so the label is right but the fragment carries almost no spam evidence; one spam message
+(``Do you realize that in about 40 years, we'll have thousands of old ladies running around with
+tattoos?'') contains no spam content at all and may be a forwarded joke labelled as spam.
+\item \textbf{A1 again:} five spam messages receive $P(\text{spam}\mid\bx)<10^{-4}$, the overconfidence
+predicted by the failure of conditional independence.
+\end{itemize}
+
+In the simulation the A4 shares differ (\res{simShareTr} vs \res{simShareTe}) because the Iteration 2
+simulation splits by position (first 1600 / last 400), not by stratification; that difference is
+sampling noise from the 400 test messages. In the real data the stratified split makes the shares
+equal by design.
+
+\begin{figure}[htbp]
+\centering
+\maybefig{sim3_reliability.png}{0.32\textwidth}\hfill
+\maybefig{real_posterior_calibration.png}{0.64\textwidth}
+\caption{A1 checks. Left: calibration on the simulation (points on the diagonal). Right: real data,
+histogram of $P(\text{spam}\mid\bx)$ on the test set (log scale) and calibration.}
+\label{fig:calib}
+\end{figure}
+\owner{Anand Joel Battula}{Jeevan Mandala}
+
+%======================================================================
+\section{Reproducibility}
+From the repository root:
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Command & Produces\\
+\midrule
+\texttt{python src/small\_example.py} & Q1, Q2; \texttt{docs/small\_results.tex}\\
+\texttt{python src/check\_simulation.py} & simulation test; \texttt{sim3\_*.png}, \texttt{docs/sim\_results.tex}\\
+\texttt{python src/run\_real.py} & real data; \texttt{real\_*.png}, \texttt{docs/real\_results.tex}\\
+\bottomrule
+\end{tabular}
+\end{center}
+The three \texttt{*\_results.tex} files hold every number in this report; uploading them to Overleaf
+together with \texttt{figures/} updates the report without retyping anything.
+
+\end{document}
